@@ -50,16 +50,15 @@ class grotemAPI2 extends CI_Controller
 	 * -- Структура поля data:
 	 *
 	['standart'||'action'||'specaction'||'nal' - значения в переменной types (начало метода)] => [
-	[Стандарт -- Имя программы] => [
-	[start] => 23.03.22 -- подключить
-	[end] =>  -- отключить
-	[exceptions] => [ -- Исключения по типам
-	[standard] => Стандарт Плюс
-	[stock] => Оптимальный Плюс
-	[specstock] => Возможно всё Плюс
-	]
-	]
-	]
+				[Стандарт -- Имя программы] => [
+						[start] => 23.03.22 -- подключить
+						[end] =>  -- отключить
+						[exceptions] => [ -- Исключения по типам
+							[standard] => Стандарт Плюс
+							[stock] => Оптимальный Плюс
+							[specstock] => Возможно всё Плюс
+						]
+				]
 	]
 	 */
 	private function rebuildData(array $data): array
@@ -131,6 +130,7 @@ class grotemAPI2 extends CI_Controller
 				}
 			}
 		}
+		//todo Проверка каждого исключения на собранный массив
 		return ['status'=>'ok','data'=>$programs];
 	}
 	
