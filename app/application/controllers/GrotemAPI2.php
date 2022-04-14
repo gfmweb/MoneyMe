@@ -1,14 +1,20 @@
 <?php
 
+use app\models\Curl;
+use app\models\Logger;
+use app\models\Jobs;
+use app\system\core\Controller;
 
 class grotemAPI2 extends CI_Controller
 {
-
+	
+	
     public function __construct()
     {
         parent::__construct();
         $this->db_programms = $this->load->database('db_programms', true, true);
         $this->db_region = $this->load->database('region', true, true);
+		
     }
 
     /*
@@ -31,7 +37,118 @@ class grotemAPI2 extends CI_Controller
             echo json_encode(array('succes' => 'False', 'Error' => 'True', 'CodeError' => '1'));
         }
     }
-
+	
+	/**
+	 * @param array $data
+	 * @return array
+	 * 1. Собираем программы
+	 * 2. Проверяем наличие такого партнера
+	 * 3. Проверяем программы на статус (работает || не работает)
+	 * 4. Получаем списки исключений по программам
+	 * 5. Фильтруем результат по принципу работает программа или нет
+	 * -- Структура ответа [status=> ok || error, message=>описание reject(не обязательный), data=>Массив данных после сбора и фильтрации ]
+	 * -- Структура поля data:
+	 *
+	['standart'||'action'||'specaction'||'nal' - значения в переменной types (начало метода)] => [
+	[Стандарт -- Имя программы] => [
+	[start] => 23.03.22 -- подключить
+	[end] =>  -- отключить
+	[exceptions] => [ -- Исключения по типам
+	[standard] => Стандарт Плюс
+	[stock] => Оптимальный Плюс
+	[specstock] => Возможно всё Плюс
+	]
+	]
+	]
+	]
+	 */
+	private function rebuildData(array $data): array
+	{
+		$programs = [];
+		$types = ['standart','action','specaction','nal'];
+		foreach($types as $item) { // циклично формируем массив программ с их типом=>названием=>[start,stop]
+			$arr =[]; // объявление пустого массива для добавления
+			if (isset($data[$item.'_new_schema'])&&(($data[$item.'_new_schema']))) { //Проверка наличия и не пустой записи
+				$body = explode('|', $data[$item.'_new_schema']);
+				$start = explode('|', $data[$item.'_datastart']);
+				$stop = explode('|', $data[$item.'_dataend']);
+				for ($i = 0, $Imax = count($body); $i < $Imax; $i++) { // Добавление дат подключения и отключения
+					$arr[$body[$i]]['start'] = (is_null($start[$i])) ? null : $start[$i];
+					$arr[$body[$i]]['end'] = (is_null($stop[$i])) ? null : $stop[$i];
+				}
+				$programs[$item] = $arr;
+			}
+		}
+		if(count($programs)==0){
+			return ['status'=>'error','message'=>'Нет программ'];
+		}
+		/*
+		 * Массив собран проверяем наличие партнера
+		 */
+		$partner = $this->db_region->select('id')
+			->from('prefixes_cb')
+			->where(['partner_prefix'=>$data['partner_prefix']])
+			->get()
+			->num_rows();
+		if($partner===0){
+			return ['status'=>'error','message'=>'Партнер не найден'];
+		}
+		/*
+		 * Проверка жива-ли программа
+		 */
+		$queryArrayLive = '('; // Объявляем массив запроса к БД
+		foreach ($programs as $type=>$program){ // Формируем массив запроса к БД жива программа или нет
+			foreach ($program as $key=>$val){
+				$queryArrayLive.=' \''.$key.'\',';
+			}
+		}
+		$queryArrayLive = mb_substr($queryArrayLive, 0, -1);
+		$queryArrayLive.=')'; // Окончание формирования WHERE IN
+		$program_is_alive = $this->db_programms->query('SELECT DISTINCT(`programm_syn`) FROM programm_margin WHERE `active` IS NULL AND `programm_syn` IN '.$queryArrayLive.'')->result();
+		
+		$queryExceptionsForPrograms ='('; // Начало формирования второго запроса на выявление исключений в анкете
+		foreach ($program_is_alive as $row){
+			$queryExceptionsForPrograms.=' \''.$row->programm_syn.'\',';
+		}
+		$queryExceptionsForPrograms = mb_substr($queryExceptionsForPrograms, 0, -1);
+		$queryExceptionsForPrograms .=')'; // Конец формирования
+		
+		$Exceptions = $this->db_programms->query('SELECT `сlient_name`,`exceptions_standard`,`exceptions_stock`,`exceptions_specstock` FROM programm_line WHERE `сlient_name` IN '.$queryExceptionsForPrograms.'')->result();
+		$ExceptionsInjection = [];
+		foreach ($Exceptions as $row){
+			$ExceptionsInjection[$row->сlient_name]=['standard'=>$row->exceptions_standard,'stock'=>$row->exceptions_stock,'specstock'=>$row->exceptions_specstock];
+		}
+		foreach ($programs as $type=>$neededPrograms){ // Фильтрация по принципу не работающей программы
+			$Check = array_keys($neededPrograms);
+			foreach ($Check as $item){
+				$pos = strpos($queryExceptionsForPrograms,$item);
+				if($pos === false){ // Удаление желанной программы в следствии того что она не работает вообще
+					unset($programs[$type][$item]);
+					if(count($programs[$type])==0){	unset($programs[$type]);}
+				}
+				else{ // Добавляем исключения которые есть у этой программы
+					$programs[$type][$item]['exceptions']=$ExceptionsInjection[$item];
+				}
+			}
+		}
+		return ['status'=>'ok','data'=>$programs];
+	}
+	
+	public function detach(){
+		$datab64 = $this->db_programms->select('*')
+			->from('grotem_insert_data')
+			->where(['id'=>24842,'succes' => '1', 'data <>' => ''])
+			->order_by('RAND()')
+			->limit(1)
+			->get()
+			->row_array();
+		$data=base64_decode($datab64['data']);
+		;
+	    $result=$this->rebuildData(json_decode($data,true));
+		$this->load->model('Logger');
+		echo '<pre>'; print_r($result); echo '</pre>';
+	}
+	
     /*
      * Функция для отправки рандомного сообщения от Гротема
      */
