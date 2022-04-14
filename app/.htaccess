@@ -1,0 +1,16 @@
+
+# Выключить обработку модулем mod_charset
+#<IfModule mod_charset.c>
+  #CharsetDisable On
+#</IfModule>
+# Выставить кодировку по умолчанию стандартными средствами apache
+
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteBase /
+    RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d	
+	RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>
+
+AddDefaultCharset utf-8
