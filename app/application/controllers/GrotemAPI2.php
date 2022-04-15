@@ -46,7 +46,9 @@ class grotemAPI2 extends CI_Controller
 	 * 3. Проверяем программы на статус (работает || не работает)
 	 * 4. Получаем списки исключений по программам
 	 * 5. Фильтруем результат по принципу работает программа или нет
-	 * -- Структура ответа [status=> ok || error, message=>описание reject(не обязательный), data=>Массив данных после сбора и фильтрации ]
+	 * 6. Фильтруем результат по принципу взаимоисключающих программ
+	 * 7. Создаем даты в которые обработчик должен работать с этой заявкой
+	 * -- Структура ответа [status=> true || false, message=>описание reject(не обязательный), data=>Массив данных после сбора и фильтрации, dates=>[Массив  [0]самое ранее начало // [count-1]самый поздний конец] ]
 	 * -- Структура поля data:
 	 *
 	['standart'||'action'||'specaction'||'nal' - значения в переменной types (начало метода)] => [
@@ -79,7 +81,7 @@ class grotemAPI2 extends CI_Controller
 			}
 		}
 		if(count($programs)==0){
-			return ['status'=>'error','message'=>'Нет программ'];
+			return ['status'=>false,'message'=>'Нет программ'];
 		}
 		/*
 		 * Массив собран проверяем наличие партнера
@@ -90,7 +92,7 @@ class grotemAPI2 extends CI_Controller
 			->get()
 			->num_rows();
 		if($partner===0){
-			return ['status'=>'error','message'=>'Партнер не найден'];
+			return ['status'=>false,'message'=>'Партнер не найден'];
 		}
 		/*
 		 * Проверка жива-ли программа
@@ -130,11 +132,35 @@ class grotemAPI2 extends CI_Controller
 				}
 			}
 		}
-		//todo Проверка каждого исключения на собранный массив
-		return ['status'=>'ok','data'=>$programs];
+		//todo фильтрация на взаимоисключающие программы
+		$startDates=[];
+		$finishDates=[];
+			foreach ($programs as $types=>$value){
+				foreach ($value as $key){
+					if($key['start']){
+						array_push($startDates,date('Y-m-d',strtotime($key['start'])));
+					}
+					if($key['end']){
+						array_push($finishDates,date('Y-m-d',strtotime($key['end'])));
+					}
+				}
+				
+			}
+			$startDates = array_unique($startDates);
+			$finishDates = array_unique($finishDates);
+			
+			function date_sort($a, $b) {return strtotime($a) - strtotime($b);}
+			
+			usort($startDates, "date_sort");
+			usort($finishDates, "date_sort");
+			// Если у нас нет ни одной даты начала // конца срока работы воркера по этой заявке
+			if(!isset($startDates[0])){$startDates[0]=date('Y-m-d',strtotime("-1 days"));}
+			if(!isset($finishDates[0])){$finishDates[0]=date('Y-m-d',strtotime("-1 days"));}
+			
+		return ['status'=>true,'data'=>$programs,'dates'=>['start'=>$startDates,'finish'=>$finishDates]];
 	}
 	
-	public function detach(){
+	public function touch(){
 		$datab64 = $this->db_programms->select('*')
 			->from('grotem_insert_data')
 			->where(['id'=>24842,'succes' => '1', 'data <>' => ''])
