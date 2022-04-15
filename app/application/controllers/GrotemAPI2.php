@@ -133,6 +133,9 @@ class grotemAPI2 extends CI_Controller
 			}
 		}
 		//todo фильтрация на взаимоисключающие программы
+		/*
+		 * Throw new reject
+		 */
 		$startDates=[];
 		$finishDates=[];
 			foreach ($programs as $types=>$value){
