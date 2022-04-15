@@ -2,7 +2,7 @@
 
 use app\models\Curl;
 use app\models\Logger;
-use app\models\Jobs;
+use app\models\Job;
 use app\system\core\Controller;
 
 class grotemAPI2 extends CI_Controller
@@ -261,19 +261,39 @@ class grotemAPI2 extends CI_Controller
 		return ['status'=>true,'data'=>$programs,'dates'=>['start'=>$startDates,'finish'=>$finishDates]];
 	}
 	
-	public function touch(){
+	public function touch()
+	{
 		$datab64 = $this->db_programms->select('*')
 			->from('grotem_insert_data')
-			->where(['id'=>24842,'succes' => '1', 'data <>' => ''])
+			->where(['id' => 24842, 'succes' => '1', 'data <>' => ''])
 			->order_by('RAND()')
 			->limit(1)
 			->get()
 			->row_array();
-		$data=base64_decode($datab64['data']);
+		$data = base64_decode($datab64['data']);
 		
-	    $result=$this->rebuildData(json_decode($data,true));
+		$result = $this->rebuildData(json_decode($data, true));
 		$this->load->model('Logger');
-		echo '<pre>'; print_r($result); echo '</pre>';
+		$this->load->model('Job');
+		if (isset($result['data'])) {
+			$job_dates = [];
+			foreach ($result['dates'] as $key=>$val){
+				foreach ($val as $item)
+				array_push($job_dates,$item);
+			}
+			$job_dates = array_unique($job_dates);
+			$parent_id = 24842; // todo ЗАМЕНИИТЬ НА возвращенный id из таблицы grotem_insert_data
+			$record_id = $this->Job->addJob($result['dates']['start'][0],$result['dates']['finish'][count($result['dates']['finish'])-1],json_encode($job_dates),json_encode($result['data'],256),$parent_id);
+			
+			$this->Logger->log('builder', 1, 'create_job', json_encode($result['data'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', $record_id);
+		}
+		else {
+			//$this->Logger->log('builder', 0, 'create_job', json_encode($result['message'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', null);
+		}
+		
+		echo '<pre>';
+		//print_r($result);
+		echo '</pre>';
 	}
 	
     /*
