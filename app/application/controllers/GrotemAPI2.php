@@ -107,6 +107,10 @@ class grotemAPI2 extends CI_Controller
 		$queryArrayLive.=')'; // Окончание формирования WHERE IN
 		$program_is_alive = $this->db_programms->query('SELECT DISTINCT(`programm_syn`) FROM programm_margin WHERE `active` IS NULL AND `programm_syn` IN '.$queryArrayLive.'')->result();
 		
+		if (count($program_is_alive) == 0){ // Проверка смысла создания Job в принципе
+			return ['status'=>false,'message'=>'Ни одной работающей программы не нашлось'];
+		}
+		
 		$queryExceptionsForPrograms ='('; // Начало формирования второго запроса на выявление исключений в анкете
 		foreach ($program_is_alive as $row){
 			$queryExceptionsForPrograms.=' \''.$row->programm_syn.'\',';
@@ -117,7 +121,7 @@ class grotemAPI2 extends CI_Controller
 		$Exceptions = $this->db_programms->query('SELECT `сlient_name`,`exceptions_standard`,`exceptions_stock`,`exceptions_specstock` FROM programm_line WHERE `сlient_name` IN '.$queryExceptionsForPrograms.'')->result();
 		$ExceptionsInjection = [];
 		foreach ($Exceptions as $row){
-			$ExceptionsInjection[$row->сlient_name]=['standard'=>$row->exceptions_standard,'stock'=>$row->exceptions_stock,'specstock'=>$row->exceptions_specstock];
+			$ExceptionsInjection[$row->сlient_name]=['standart'=>$row->exceptions_standard,'action'=>$row->exceptions_stock,'specaction'=>$row->exceptions_specstock];
 		}
 		foreach ($programs as $type=>$neededPrograms){ // Фильтрация по принципу не работающей программы
 			$Check = array_keys($neededPrograms);
@@ -136,6 +140,103 @@ class grotemAPI2 extends CI_Controller
 		/*
 		 * Throw new reject
 		 */
+		$checkExceptionsArray=[]; // Общий массив всех исключений
+		foreach ($programs as $type=>$name){ // Формирование всех типов исключений
+			foreach ($name as $item){
+				if(isset($item['exceptions'])){
+					foreach($item['exceptions'] as $exceptionKey=>$exceptionVal){
+						if($exceptionVal) $checkExceptionsArray[$exceptionKey][] = $exceptionVal;
+						$checkExceptionsArray[$exceptionKey] = array_unique($checkExceptionsArray[$exceptionKey]);
+					}
+				}
+			}
+		} // Окончание формирования исключений по категориям
+  
+		$liveTypes=['add','remove','time_add']; // Тип жизни программы [подключение, отключение, подключение на период]
+		foreach ($checkExceptionsArray as $typeException=>$exceptionsGroup){
+			foreach ($exceptionsGroup as $exceptionElement){
+				if(isset($programs[$typeException][$exceptionElement])){
+					// Получение конфликтующих программ
+					$program_one[$exceptionElement] = $programs[$typeException][$exceptionElement];
+					$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]] = $programs[$typeException][$programs[$typeException][$exceptionElement]['exceptions'][$typeException]];
+					// Определение сроков жизни конфликтующих программ
+					if($program_one[$exceptionElement]['start']!==''&&$program_one[$exceptionElement]['end']!==''){
+						$program_one['life']['type']='time_add';
+						$program_one['life']['start']=strtotime($program_one[$exceptionElement]['start']);
+						$program_one['life']['end']=strtotime($program_one[$exceptionElement]['end']);
+					}
+					elseif ($program_one[$exceptionElement]['start']!==''&&$program_one[$exceptionElement]['end']==''){
+						$program_one['life']['type']='add';
+						$program_one['life']['start']=strtotime($program_one[$exceptionElement]['start']);
+					}
+					elseif($program_one[$exceptionElement]['start']==''&&$program_one[$exceptionElement]['end']!==''){
+						$program_one['life']['type']='remove';
+						$program_one['life']['end']=strtotime($program_one[$exceptionElement]['end']);
+					}
+					if(($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['start']!=='')&&($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']!=='')){
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['type']='time_add';
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['start']=strtotime($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['start']);
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['end']=strtotime($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']);
+					}
+					elseif($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['start']!==''&&$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']==''){
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['type']='add';
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['start']=strtotime($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['start']);
+					}
+					elseif($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['start']==''&&$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']!==''){
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['type']='remove';
+						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['end']=strtotime($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']);
+					}
+					// Конец определения типов подключения конфликтующих программ
+					
+					// Проверка уживаемости
+					 if($program_one['life']['type'] == 'add' && $program_two['life']['type'] == 'add'){ // полная несовместимость
+						 return ['status'=>false,'message'=>'Взаимоисключающие программы не могут быть запущены! ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 
+					 elseif($program_one['life']['type'] == 'add'&& $program_two['life']['type'] == 'time_add'){ //Первую подключаем Вторую будем отключать
+						if($program_one['life']['start']< $program_two['life']['end'])
+							return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 elseif($program_two['life']['type'] == 'add'&& $program_one['life']['type'] == 'time_add'){ //Первую подключаем Вторую будем отключать
+						 if($program_two['life']['start']< $program_one['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+					 }
+					 
+					 elseif($program_one['life']['type'] == 'add'&& $program_two['life']['type'] == 'remove'){ //Первую подключаем Вторую отключаем
+						 if($program_one['life']['start'] < $program_two['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 elseif($program_one['life']['type'] == 'remove'&& $program_two['life']['type'] == 'add'){ //Первую отключаем  Вторую подключаем
+						 if($program_two['life']['start'] < $program_one['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+					 }
+					 
+					 elseif($program_one['life']['type'] == 'time_add'&& $program_two['life']['type'] == 'remove'){ //Первую подключаем на время  Вторую отключаем
+						 if($program_one['life']['start'] < $program_two['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 elseif($program_two['life']['type'] == 'time_add'&& $program_one['life']['type'] == 'remove'){ //Первую подключаем на время  Вторую отключаем
+						 if($program_two['life']['start'] < $program_one['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+					 }
+					 
+					 elseif ($program_one['life']['type'] == 'time_add'&& $program_two['life']['type'] == 'time_add'){ // Обе подключаются на какое-то время
+						 $line = [];
+						  if($program_one['life']['start'] <= $program_two['life']['start']){
+							$line[0]=$program_one;
+							$line[1]=$program_two;
+						 }
+						  else{
+							  $line[1]=$program_one;
+							  $line[0]=$program_two;
+						  }
+						  if($line[0]['life']['end'] >$line[1]['life']['end']){
+							  return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+						  }
+					 }
+				}
+			}
+		}
 		$startDates=[];
 		$finishDates=[];
 			foreach ($programs as $types=>$value){
@@ -172,7 +273,7 @@ class grotemAPI2 extends CI_Controller
 			->get()
 			->row_array();
 		$data=base64_decode($datab64['data']);
-		;
+		
 	    $result=$this->rebuildData(json_decode($data,true));
 		$this->load->model('Logger');
 		echo '<pre>'; print_r($result); echo '</pre>';
