@@ -136,10 +136,7 @@ class grotemAPI2 extends CI_Controller
 				}
 			}
 		}
-		//todo фильтрация на взаимоисключающие программы
-		/*
-		 * Throw new reject
-		 */
+		
 		$checkExceptionsArray=[]; // Общий массив всех исключений
 		foreach ($programs as $type=>$name){ // Формирование всех типов исключений
 			foreach ($name as $item){
@@ -236,7 +233,7 @@ class grotemAPI2 extends CI_Controller
 					 }
 				}
 			}
-		}
+		} //Конец проверки
 		$startDates=[];
 		$finishDates=[];
 			foreach ($programs as $types=>$value){
