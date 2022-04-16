@@ -3,6 +3,19 @@
 	use app\models\Logger;
 	use app\system\core\Controller;
 	
+	/**
+	 * Автономно работающий класс
+	 * 1. Инициализация подключений к БД
+	 * 2. Подключение Телеграм оповещателя ~DebugAlarm_bot
+	 * 3. сообщение о начале работы
+	 * 4. Сбор заявок в день запуска
+	 * 5. Проверка партнёра
+	 * 6. Подготовка списков программ для подключения // удаления
+	 * 7. Удаление из анкеты программ подпадающих под удаление
+	 * 8. Добавление новых
+	 * 9. Запись в БД
+	 * 10.Сообщение об окончании работы
+	 */
 	class Worker extends CI_Controller
 	{
 		public function __construct()
@@ -116,6 +129,10 @@
 			foreach ($StartResult as $start){
 				$anketa['programm'][0]['programms'][]=$start['record'];
 			}
+			foreach ($anketa['programm'][0]['programms'] as $programm){
+				$temp[]=$programm;
+			}
+			$anketa['programm'][0]['programms']=$temp; // теперь программы опять по порядку индексов
 			$writeData = base64_encode(serialize($anketa));
 			
 			$this->db_setup->query('UPDATE application SET `data` =\''.$writeData.'\' WHERE `id` = '.$partner[0]['id']);
