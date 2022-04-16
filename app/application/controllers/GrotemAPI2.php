@@ -149,7 +149,7 @@ class grotemAPI2 extends CI_Controller
 			}
 		} // Окончание формирования исключений по категориям
   
-		$liveTypes=['add','remove','time_add']; // Тип жизни программы [подключение, отключение, подключение на период]
+		
 		foreach ($checkExceptionsArray as $typeException=>$exceptionsGroup){
 			foreach ($exceptionsGroup as $exceptionElement){
 				if(isset($programs[$typeException][$exceptionElement])){
@@ -287,7 +287,9 @@ class grotemAPI2 extends CI_Controller
 			$this->Logger->log('builder', 1, 'create_job', json_encode(['partner_prefix'=>$data['partner_prefix']]), 'grotem_insert_data', $parent_id, 'grotem_jobs', $record_id);
 		}
 		else {
-			$this->Logger->log('builder', 0, 'create_job', json_encode($result['message'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', null);
+			$error_id = $this->Logger->log('builder', 0, 'create_job', json_encode($result['message'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', null);
+			require_once ('TelegramAlert.php');
+			TelegramAlert::send('Постановка задачи завершилась ошибкой '.PHP_EOL.'Запись в таблице логов-'.$error_id.' Описание '.$result['message']);
 		}
 		
 		
