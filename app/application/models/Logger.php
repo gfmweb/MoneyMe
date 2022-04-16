@@ -9,6 +9,18 @@
 			
 		}
 		
+		/**
+		 * @param string $owner
+		 * @param bool $status || 1 - успешно 2 - Провал
+		 * @param string $operation || ENUM create_job, work
+		 * @param string $writing_data || Json поле для служебных записей
+		 * @param string|null $parent_table || Указание на таблицу - первоисточник
+		 * @param int|null $parent_id || Указание на id записи в таблице первоисточника
+		 * @param string|null $recipient_table || Указание таблицы в которую делается запись
+		 * @param int|null $recipient_id || ID записи в таблице приемнике
+		 * @return bool
+		 * Запись логов операций
+		 */
 		public function log(string $owner, bool $status, string $operation,string $writing_data, string $parent_table = null, int $parent_id = null, string $recipient_table = null, int $recipient_id = null ):bool
 		{
 			return $this->db_programms->insert('Log',

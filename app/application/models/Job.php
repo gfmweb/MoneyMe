@@ -17,6 +17,6 @@
 		public function getDateJobs(string $date)
 		{
 			$workDate = '2021-01-27'; //todo Убрать $WorkDate заменить на $date
-			return  $this->db_programms->query('SELECT id, job_body FROM `Jobs` WHERE DATE(job_start) <= "'.$date.'" AND DATE(job_finish) >= "'.$date.'" AND JSON_CONTAINS (job_dates, \'["'.$workDate.'"]\')')->result_array();
+			return  $this->db_programms->query('SELECT j.id, j.job_body, l.log_writing_data as partner  FROM `Jobs` j LEFT JOIN Log l ON j.id = l.log_recipient_id WHERE DATE(job_start) <= "'.$date.'" AND DATE(job_finish) >= "'.$date.'" AND JSON_CONTAINS (job_dates, \'["'.$workDate.'"]\')')->result_array();
 		}
 	}
