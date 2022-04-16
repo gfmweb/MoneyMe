@@ -275,6 +275,7 @@ class grotemAPI2 extends CI_Controller
 		$result = $this->rebuildData(json_decode($data, true));
 		$this->load->model('Logger');
 		$this->load->model('Job');
+		$parent_id = 24842; // todo ЗАМЕНИИТЬ НА возвращенный id из таблицы grotem_insert_data
 		if (isset($result['data'])) {
 			$job_dates = [];
 			foreach ($result['dates'] as $key=>$val){
@@ -282,18 +283,14 @@ class grotemAPI2 extends CI_Controller
 				array_push($job_dates,$item);
 			}
 			$job_dates = array_unique($job_dates);
-			$parent_id = 24842; // todo ЗАМЕНИИТЬ НА возвращенный id из таблицы grotem_insert_data
 			$record_id = $this->Job->addJob($result['dates']['start'][0],$result['dates']['finish'][count($result['dates']['finish'])-1],json_encode($job_dates),json_encode($result['data'],256),$parent_id);
-			
 			$this->Logger->log('builder', 1, 'create_job', json_encode($result['data'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', $record_id);
 		}
 		else {
-			//$this->Logger->log('builder', 0, 'create_job', json_encode($result['message'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', null);
+			$this->Logger->log('builder', 0, 'create_job', json_encode($result['message'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', null);
 		}
 		
-		echo '<pre>';
-		//print_r($result);
-		echo '</pre>';
+		
 	}
 	
     /*
