@@ -152,7 +152,7 @@
 			
 			$this->db_setup->query('UPDATE application SET `data` =\''.$writeData.'\' WHERE `id` = '.$partner[0]['id']);
 			$this->Logger->log('worker',1,'work',json_encode(['result'=>$result],256),'Log',$id,'application',$partner[0]['id']);
-			TelegramAlert::send('Работа с заданиями закончено');
+			TelegramAlert::send('Работа с заданиями закончена');
 			
 		}
 	}
