@@ -81,17 +81,26 @@
 						}
 					}
 					$Exceptions = array_unique($ExceptionsRequest);
-					unset($ExceptionsRequest[count($ExceptionsRequest)-1]);
-					$ExceptionsResult = $this->Job->getTechNames($ExceptionsRequest,true); // Собран массив всех исключений с нормальным именем и техническим
+					if(count($ExceptionsRequest)> 0) {
+						unset($ExceptionsRequest[count($ExceptionsRequest) - 1]);
+						$ExceptionsResult = $this->Job->getTechNames($ExceptionsRequest, true); // Собран массив всех исключений с нормальным именем и техническим
+					}
+					else{
+						$ExceptionsResult=[];
+					}
 					// Проверяем программы на работоспособность в день их подключения (Работаем с массивом $programs_to_job['start'])
+					$StartResult=[];
 					foreach($programs_to_job['start'] as $program){
 						$StartResult[] = $program['name'];
 					}
-					$StartResult = $this->Job->getTechNames($StartResult);
+					
 					if(count($StartResult)==0){
 						$error_id = $this->Logger->log('worker',0,'work',json_encode(['message'=>'Нет ни одной рабочей программы для подключения'],256),'Log',$id);
-						TelegramAlert::send('Нет ни одной рабочей программы для подключения'.$error_id);
-						continue;
+						TelegramAlert::send('Нет ни одной рабочей программы для подключения id Log = '.$error_id);
+						
+					}
+					else{
+						$StartResult = $this->Job->getTechNames($StartResult);
 					}
 				}
 			}
