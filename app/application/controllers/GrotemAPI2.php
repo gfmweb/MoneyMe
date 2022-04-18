@@ -56,7 +56,7 @@ class grotemAPI2 extends CI_Controller
 						[start] => 23.03.22 -- подключить
 						[end] =>  -- отключить
 						[exceptions] => [ -- Исключения по типам
-							[standard] => Стандарт Плюс
+							[standart] => Стандарт Плюс
 							[stock] => Оптимальный Плюс
 							[specstock] => Возможно всё Плюс
 						]
