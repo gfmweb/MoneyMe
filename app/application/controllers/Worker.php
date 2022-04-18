@@ -58,6 +58,7 @@
 						TelegramAlert::send('Работа по заданию завершилась ошибкой. Партнер не TT. Запись'.$error_id);
 						continue;
 					}
+					// оставил как пример но можно затереть
 					//$day = date('d.m.y',strtotime('2021-01-27')); //todo убрать strtotime
 					$day = date('d.m.y');
 					$programs_to_job['start'] =[]; // Массив предстоящих работ по подключению
