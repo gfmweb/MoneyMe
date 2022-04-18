@@ -329,11 +329,7 @@ class grotemAPI2 extends CI_Controller
         );
     }
 
-	public function tele()
-	{
-		require_once ('TelegramAlert.php');
-		TelegramAlert::send($this->db_debug,'Moor');
-	}
+	
 
     /*
      *  Задача 1.
