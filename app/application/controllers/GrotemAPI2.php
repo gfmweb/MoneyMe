@@ -185,8 +185,8 @@ class grotemAPI2 extends CI_Controller
 					}
 					// Конец определения типов подключения конфликтующих программ
 					
-					// Проверка уживаемости
-					 if($program_one['life']['type'] == 'add' && $program_two['life']['type'] == 'add'){ // полная несовместимость
+					// Проверка уживаемости ОТРЕЗАНО по распоряжению Дениса
+					/* if($program_one['life']['type'] == 'add' && $program_two['life']['type'] == 'add'){ // полная несовместимость
 						 return ['status'=>false,'message'=>'Взаимоисключающие программы не могут быть запущены! ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
 					 }
 					 
@@ -230,7 +230,7 @@ class grotemAPI2 extends CI_Controller
 						  if($line[0]['life']['end'] >$line[1]['life']['end']){
 							  return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
 						  }
-					 }
+					 }*/
 				}
 			}
 		} //Конец проверки
@@ -238,25 +238,42 @@ class grotemAPI2 extends CI_Controller
 		$finishDates=[];
 			foreach ($programs as $types=>$value){
 				foreach ($value as $key){
-					if($key['start']){
-						array_push($startDates,date('Y-m-d',strtotime($key['start'])));
+					
+					if($key['start']!==''){
+					
+						$startDates[]=date('Y-m-d',strtotime($key['start']));
 					}
-					if($key['end']){
-						array_push($finishDates,date('Y-m-d',strtotime($key['end'])));
+					
+					if(($key['end']!=='')&&(!is_null($key['end']))){
+						$date = str_replace('.','-',$key['end']);
+						$finishDates[]=date('Y-m-d',strtotime($date));
 					}
 				}
 				
 			}
+			
 			$startDates = array_unique($startDates);
+		
 			$finishDates = array_unique($finishDates);
 			
 			function date_sort($a, $b) {return strtotime($a) - strtotime($b);}
 			
 			usort($startDates, "date_sort");
 			usort($finishDates, "date_sort");
+			foreach($startDates as $item) {
+				$temp[] = $item;
+			}
+			$startDates = $temp;
+			$temp=[];
+			foreach($finishDates as $item) {
+				$temp[] = $item;
+			}
+			$finishDates = $temp;
+			unset ($temp);
+			
 			// Если у нас нет ни одной даты начала // конца срока работы воркера по этой заявке
 			if(!isset($startDates[0])){$startDates[0]=date('Y-m-d',strtotime("-1 days"));}
-			if(!isset($finishDates[0])){$finishDates[0]=date('Y-m-d',strtotime("+1 year"));}
+			if(!isset($finishDates[0])){$finishDates[]=date('Y-m-d',strtotime("+1 years"));}
 			
 		return ['status'=>true,'data'=>$programs,'dates'=>['start'=>$startDates,'finish'=>$finishDates]];
 	}
@@ -276,13 +293,16 @@ class grotemAPI2 extends CI_Controller
 		$this->load->model('Logger');
 		$this->load->model('Job');
 		$parent_id = 24842; // todo ЗАМЕНИИТЬ НА возвращенный id из таблицы grotem_insert_data
+		
 		if (isset($result['data'])) {
 			$job_dates = [];
 			foreach ($result['dates'] as $key=>$val){
 				foreach ($val as $item)
 				array_push($job_dates,$item);
 			}
+		
 			$job_dates = array_unique($job_dates);
+			
 			$record_id = $this->Job->addJob($result['dates']['start'][0],$result['dates']['finish'][count($result['dates']['finish'])-1],json_encode($job_dates),json_encode($result['data'],256),$parent_id);
 			$this->Logger->log('builder', 1, 'create_job', json_encode(['partner_prefix'=>$data['partner_prefix']]), 'grotem_insert_data', $parent_id, 'grotem_jobs', $record_id);
 		}

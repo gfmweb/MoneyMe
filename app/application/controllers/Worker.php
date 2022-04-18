@@ -96,8 +96,8 @@
 					}
 					
 					if (count($StartResult) == 0) {
-						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Нет ни одной рабочей программы для подключения'], 256), 'Log', $id);
-						TelegramAlert::send('Нет ни одной рабочей программы для подключения id Log = ' . $error_id);
+						//$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Нет ни одной рабочей программы для подключения'], 256), 'Log', $id);
+						//TelegramAlert::send('Нет ни одной рабочей программы для подключения id Log = ' . $error_id);
 						
 					} else {
 						$StartResult = $this->Job->getTechNames($StartResult);
