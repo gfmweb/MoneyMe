@@ -27,6 +27,10 @@
 		
 		public function index()
 		{
+			$secret = password_hash('password', PASSWORD_DEFAULT); // Значение ключа
+			$key = $this->input->get('key'); // Передаваемый параметр KEY
+			if(!password_verify($key,$secret)){die();} // Умираем если ключ нам не передали или он не подходит
+			
 			require_once ('TelegramAlert.php');
 			TelegramAlert::send('Начало работы с заданиями');
 			$types = ['standart','action','specaction'];
