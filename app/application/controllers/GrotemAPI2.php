@@ -238,26 +238,19 @@ class grotemAPI2 extends CI_Controller
 		$finishDates=[];
 			foreach ($programs as $types=>$value){
 				foreach ($value as $key){
-					
 					if($key['start']!==''){
-					
-						$startDates[]=date('Y-m-d',strtotime($key['start']));
+						$date = DateTime::createFromFormat('d.m.y',$key['start']);
+						$startDates[]=$date->format('Y-m-d');
 					}
-					
-					if(($key['end']!=='')&&(!is_null($key['end']))){
-						$date = str_replace('.','-',$key['end']);
-						$finishDates[]=date('Y-m-d',strtotime($date));
+					if(($key['end']!=='')){
+						$date = DateTime::createFromFormat('d.m.y',$key['end']);
+						$finishDates[]=$date->format('Y-m-d');
 					}
 				}
-				
 			}
-			
 			$startDates = array_unique($startDates);
-		
 			$finishDates = array_unique($finishDates);
-			
 			function date_sort($a, $b) {return strtotime($a) - strtotime($b);}
-			
 			usort($startDates, "date_sort");
 			usort($finishDates, "date_sort");
 			foreach($startDates as $item) {
