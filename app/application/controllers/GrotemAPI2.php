@@ -14,6 +14,7 @@ class grotemAPI2 extends CI_Controller
         parent::__construct();
         $this->db_programms = $this->load->database('db_programms', true, true);
         $this->db_region = $this->load->database('region', true, true);
+	    $this->db_debug = $this->load->database('debug',true,true);
 		
     }
 
@@ -302,11 +303,12 @@ class grotemAPI2 extends CI_Controller
 		else {
 			$error_id = $this->Logger->log('builder', 0, 'create_job', json_encode($result['message'], 256), 'grotem_insert_data', $parent_id, 'grotem_jobs', null);
 			require_once ('TelegramAlert.php');
-			TelegramAlert::send('Постановка задачи завершилась ошибкой '.PHP_EOL.'Запись в таблице логов-'.$error_id.' Описание '.$result['message']);
+			TelegramAlert::send($this->db_debug,'Постановка задачи завершилась ошибкой '.PHP_EOL.'Запись в таблице логов-'.$error_id.' Описание '.$result['message']);
 		}
 		
 		
 	}
+	
 	
     /*
      * Функция для отправки рандомного сообщения от Гротема
@@ -327,6 +329,11 @@ class grotemAPI2 extends CI_Controller
         );
     }
 
+	public function tele()
+	{
+		require_once ('TelegramAlert.php');
+		TelegramAlert::send($this->db_debug,'Moor');
+	}
 
     /*
      *  Задача 1.

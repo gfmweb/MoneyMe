@@ -23,6 +23,7 @@
 			parent::__construct();
 			$this->db_programms = $this->load->database('db_programms', true, true);
 			$this->db_setup = $this->load->database('setup',true,true);
+			$this->db_debug = $this->load->database('debug',true,true);
 		}
 		
 		public function index()
@@ -32,7 +33,7 @@
 			if(!password_verify($key,$secret)){die();} // Умираем если ключ нам не передали или он не подходит
 			
 			require_once ('TelegramAlert.php');
-			TelegramAlert::send('Начало работы с заданиями');
+			TelegramAlert::send($this->db_debug,'Начало работы с заданиями');
 			$types = ['standart','action','specaction'];
 			set_time_limit(800000);
 			$this->load->model('Job');
@@ -51,12 +52,12 @@
 					$anketa = unserialize(base64_decode($partner[0]['data']));
 					if ($partner[0]['active'] == '2') {
 						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Партнер не активен'], 256), 'Log', $id);
-						TelegramAlert::send('Работа по заданию завершилась ошибкой. Партнер не активен. Запись' . $error_id);
+						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не активен. Запись' . $error_id);
 						continue;
 					}
 					if ($partner[0]['is_TT'] !== '1') {
 						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Партнер не ТТ'], 256), 'Log', $id);
-						TelegramAlert::send('Работа по заданию завершилась ошибкой. Партнер не TT. Запись' . $error_id);
+						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не TT. Запись' . $error_id);
 						continue;
 					}
 					// оставил как пример но можно затереть
@@ -95,12 +96,9 @@
 						$StartResult[] = $program['name'];
 					}
 					
-					if (count($StartResult) == 0) {
-						//$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Нет ни одной рабочей программы для подключения'], 256), 'Log', $id);
-						//TelegramAlert::send('Нет ни одной рабочей программы для подключения id Log = ' . $error_id);
-						
-					} else {
+					if (count($StartResult) > 0) {
 						$StartResult = $this->Job->getTechNames($StartResult);
+						
 					}
 				}
 				
@@ -152,7 +150,7 @@
 				$this->db_setup->query('UPDATE application SET `data` =\'' . $writeData . '\' WHERE `id` = ' . $partner[0]['id']);
 				$this->Logger->log('worker', 1, 'work', json_encode(['result' => $result], 256), 'Log', $id, 'application', $partner[0]['id']);
 			}
-			TelegramAlert::send('Работа с заданиями закончена');
+			TelegramAlert::send($this->db_debug,'Работа с заданиями закончена');
 			
 		}
 	}
