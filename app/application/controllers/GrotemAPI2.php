@@ -256,7 +256,7 @@ class grotemAPI2 extends CI_Controller
 			usort($finishDates, "date_sort");
 			// Если у нас нет ни одной даты начала // конца срока работы воркера по этой заявке
 			if(!isset($startDates[0])){$startDates[0]=date('Y-m-d',strtotime("-1 days"));}
-			if(!isset($finishDates[0])){$finishDates[0]=date('Y-m-d',strtotime("-1 days"));}
+			if(!isset($finishDates[0])){$finishDates[0]=date('Y-m-d',strtotime("+1 year"));}
 			
 		return ['status'=>true,'data'=>$programs,'dates'=>['start'=>$startDates,'finish'=>$finishDates]];
 	}
