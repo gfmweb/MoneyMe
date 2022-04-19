@@ -341,11 +341,7 @@ class grotemAPI2 extends CI_Controller
         );
     }
 
-	public function test2(){
-		$data = '{"standart":{"Стандарт":{"start":"23.03.22","end":"","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}},"Стандарт 3":{"start":"27.01.21","end":"22.03.22","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}}},"action":{"Оптимальный":{"start":"23.03.22","end":"","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}},"Удобный 2":{"start":"27.01.21","end":"23.03.22","exceptions":{"standart":"","action":"","specaction":""}}}}';
-		$data = json_decode($data,true);
-		echo '<pre>'; print_r($data); echo '</pre>';
-	}
+	
 
     /*
      *  Задача 1.
