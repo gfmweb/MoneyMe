@@ -267,7 +267,7 @@ class grotemAPI2 extends CI_Controller
 			
 			// Если у нас нет ни одной даты начала // конца срока работы воркера по этой заявке
 			if(!isset($startDates[0])){$startDates[0]=date('Y-m-d',strtotime("-1 days"));}
-			if(!isset($finishDates[0])){$finishDates[]=date('Y-m-d',strtotime("+1 years"));}
+			if(!isset($finishDates[0])){$finishDates[] = $startDates[count($startDates)-1];} //Если у нас нет ни одной даты конца, то концом задания будем считать последнюю дату начала
 			
 		return ['status'=>true,'data'=>$programs,'dates'=>['start'=>$startDates,'finish'=>$finishDates]];
 	}
@@ -329,7 +329,11 @@ class grotemAPI2 extends CI_Controller
         );
     }
 
-	
+	public function test2(){
+		$data = '{"standart":{"Стандарт":{"start":"23.03.22","end":"","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}},"Стандарт 3":{"start":"27.01.21","end":"22.03.22","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}}},"action":{"Оптимальный":{"start":"23.03.22","end":"","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}},"Удобный 2":{"start":"27.01.21","end":"23.03.22","exceptions":{"standart":"","action":"","specaction":""}}}}';
+		$data = json_decode($data,true);
+		echo '<pre>'; print_r($data); echo '</pre>';
+	}
 
     /*
      *  Задача 1.

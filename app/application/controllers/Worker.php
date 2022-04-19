@@ -83,9 +83,12 @@
 							$ExceptionsRequest[] = $programs_to_job['start'][$i]['exceptions'][$type];
 						}
 					}
-					$Exceptions = array_unique($ExceptionsRequest);
+					foreach($ExceptionsRequest as $item){ // Контроль пустых значений в Exceptions
+						if(!empty($item))$except_temp[]=$item;
+					}
+					$ExceptionsRequest = $except_temp;
 					if (count($ExceptionsRequest) > 0) {
-						unset($ExceptionsRequest[count($ExceptionsRequest) - 1]);
+					
 						$ExceptionsResult = $this->Job->getTechNames($ExceptionsRequest, true); // Собран массив всех исключений с нормальным именем и техническим
 					} else {
 						$ExceptionsResult = [];
