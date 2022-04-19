@@ -296,8 +296,20 @@ class grotemAPI2 extends CI_Controller
 			}
 		
 			$job_dates = array_unique($job_dates);
+			// Проверка что у нас раньше (первый старт или первый финиш) - это определит стартовую дату работы с заданием
 			
-			$record_id = $this->Job->addJob($result['dates']['start'][0],$result['dates']['finish'][count($result['dates']['finish'])-1],json_encode($job_dates),json_encode($result['data'],256),$parent_id);
+			$firstStartDay = strtotime($result['dates']['start'][0]);
+			$firstEndDay = strtotime($result['dates']['finish'][0]);
+			
+			$lastStartDay = strtotime($result['dates']['start'][count($result['dates']['start'])-1]);
+			$lastEndDay = strtotime($result['dates']['finish'][count($result['dates']['finish'])-1]);
+			$realStart = ($firstStartDay <= $firstEndDay)?$result['dates']['start'][0]:$result['dates']['finish'][0];
+			$realEnd = ($lastStartDay >= $lastEndDay)?$result['dates']['start'][count($result['dates']['start'])-1]:$result['dates']['finish'][count($result['dates']['finish'])-1];
+			//  + Проверка что позже последний старт или последний финиш
+			
+			
+			
+			$record_id = $this->Job->addJob($realStart,$realEnd,json_encode($job_dates),json_encode($result['data'],256),$parent_id);
 			$this->Logger->log('builder', 1, 'create_job', json_encode(['partner_prefix'=>$data['partner_prefix']]), 'grotem_insert_data', $parent_id, 'grotem_jobs', $record_id);
 		}
 		else {
