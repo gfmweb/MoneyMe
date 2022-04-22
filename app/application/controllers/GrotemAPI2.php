@@ -74,35 +74,21 @@ class grotemAPI2 extends CI_Controller
 				$body = explode('|', $data[$item.'_new_schema']);
 				$start = explode('|', $data[$item.'_datastart']);
 				$stop = explode('|', $data[$item.'_dataend']);
+				$preQuery = '(';
+				foreach ($body as $item){
+					$preQuery.=' \''.$item.'\',';
+				}
+				$preQuery = mb_substr($preQuery, 0, -1);
+				$preQuery.=')';
+				
+				$dataBase = $this->db_programms->query('SELECT сlient_name, loan_interest FROM programm_line WHERE сlient_name IN '.$preQuery)->result_array();
+				
 				for ($i = 0, $Imax = count($body); $i < $Imax; $i++) { // Добавление дат подключения и отключения
 					$arr[$body[$i]]['start'] = (is_null($start[$i])) ? null : $start[$i];
 					$arr[$body[$i]]['end'] = (is_null($stop[$i])) ? null : $stop[$i];
-					
-					preg_match_all("/\d+/", $body[$i], $matches);
-						$matches = $matches[0];
-						if(count($matches)==0){
-							$matchesEnd = 0;
-						}
-						elseif (count($matches)==1){
-							$matchesEnd = $matches[0];
-						}
-						elseif (count($matches)>1){
-							if($matches[0]==0){
-								$matchesEnd='0.';
-								for ($t=1,$TMax=count($matches); $t < $TMax; $t++){
-									$matchesEnd.=$matches[$t];
-								}
-							}
-							else{
-								$matchesEnd='';
-								foreach ($matches as $num){
-									$matchesEnd.=$num;
-								}
-							}
-						}
-						
-					$arr[$body[$i]]['loan_interest'] = $matchesEnd;
-					
+					foreach ($dataBase as $itemDB){
+						if ($itemDB['сlient_name']==$body[$i]){$arr[$body[$i]]['loan_interest']=$itemDB['loan_interest'];}
+					}
 				}
 				$programs[$item] = $arr;
 			}
