@@ -33,7 +33,42 @@
 		public function getDateJobs(string $date):array
 		{
 			
-			return  $this->db_programms->query('SELECT j.id, j.job_body, l.log_writing_data as partner  FROM `Jobs` j LEFT JOIN Log l ON j.id = l.log_recipient_id WHERE DATE(job_start) <= "'.$date.'" AND DATE(job_finish) >= "'.$date.'" AND JSON_CONTAINS (job_dates, \'["'.$date.'"]\')')->result_array();
+			return  $this->db_programms->query('SELECT j.id, j.job_body, l.log_writing_data as partner  FROM `Jobs` j LEFT JOIN Log l ON j.id = l.log_recipient_id WHERE DATE(job_start) <= "'.$date.'" AND DATE(job_finish) >= "'.$date.'" AND JSON_CONTAINS (job_dates, \'["'.$date.'"]\') AND job_last_work_day IS NOT '.date('Y-m-d'))->result_array();
+		}
+		
+		/**
+		 * @param array $Jobs
+		 * @return void
+		 * Устанавливает текущую дату заданиям отданным воркеру
+		 */
+		public function setJobsAtWork(array $Jobs){
+			$querySTR ='( ';
+			foreach ($Jobs as $id){
+				$querySTR.=' \''.$id['job_id'].'\',';
+			}
+			$querySTR=mb_substr($querySTR, 0, -1);
+			$querySTR.=')';
+			$this->db_programms->query('UPDATE Jobs SET job_last_work_day = '.date('Y-m-d').' WHERE job_id IN '.$querySTR);
+			
+		}
+		
+		/**
+		 * @return int
+		 * Текущий показатель состояния работника 1 - сейчас работает; 0 - сейчас не работает
+		 */
+		public function getWorkerStatus(): int{
+			$result = $this->db_programms->query('SELECT * FROM Worker_instance WHERE 1')->result_array();
+			return $result[0]['worker_at_work'];
+		}
+		
+		/**
+		 * @param int $status
+		 * @return bool
+		 * Меняет статус Workera
+		 */
+		public  function updateWorkerStatus(int $status):bool
+		{
+			return $this->db_programms->query('UPDATE Worker_instance SET worker_at_work = '.$status.' WHERE 1');
 		}
 		
 		/**
@@ -45,7 +80,7 @@
 		 * 2. Когда мы проверяем программы которые будем удалть (Exceptions или просто программы для удаления) - то мы не проверяем статус их активности
 		 */
 		public function  getTechNames(array $Request, bool $Is_exception=false): array
-		{
+		{ //todo срочно переделать под последнюю правку с учетом loan_interest
 			$Query = '(';
 			foreach ($Request as $item){
 				$Query.=' \''.$item.'\',';

@@ -31,17 +31,23 @@
 			$secret = password_hash('password', PASSWORD_DEFAULT); // Значение ключа
 			$key = $this->input->get('key'); // Передаваемый параметр KEY
 			if(!password_verify($key,$secret)){die();} // Умираем если ключ нам не передали или он не подходит
-			
-			require_once ('TelegramAlert.php');
-			TelegramAlert::send($this->db_debug,'Начало работы с заданиями');
-			$types = ['standart','action','specaction'];
-			set_time_limit(800000);
 			$this->load->model('Job');
 			$this->load->model('AnketMaster');
 			$this->load->model('Logger');
+			require_once ('TelegramAlert.php');
+			TelegramAlert::send($this->db_debug,'Начало работы с заданиями');
+			$types = ['standart','action','specaction'];
+			set_time_limit(3600000);
+			$instance_at_work = $this->Job->getWorkerStatus();
+			while($instance_at_work == 1){ // Если у нас уже работает worker то просто спим 5 секунд
+				sleep(5);
+				$instance_at_work = $this->Job->getWorkerStatus(); // Обновляем статус работника
+			}
+			$this->Job->updateWorkerStatus(1); // Занимаем Worker
+			
 			$day = date('Y-m-d');
 			$Jobs = $this->Job->getDateJobs($day);
-			
+			$this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
 			if(count($Jobs) > 0) { //Если есть работа на сегодня
 				foreach ($Jobs as $item) {
 					$id = $item['id'];
@@ -154,6 +160,7 @@
 				$this->Logger->log('worker', 1, 'work', json_encode(['result' => $result], 256), 'Log', $id, 'application', $partner[0]['id']);
 			}
 			TelegramAlert::send($this->db_debug,'Работа с заданиями закончена');
+			$this->Job->updateWorkerStatus(0); // Освобождаем воркера
 			
 		}
 	}
