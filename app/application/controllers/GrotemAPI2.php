@@ -77,9 +77,36 @@ class grotemAPI2 extends CI_Controller
 				for ($i = 0, $Imax = count($body); $i < $Imax; $i++) { // Добавление дат подключения и отключения
 					$arr[$body[$i]]['start'] = (is_null($start[$i])) ? null : $start[$i];
 					$arr[$body[$i]]['end'] = (is_null($stop[$i])) ? null : $stop[$i];
+					
+					preg_match_all("/\d+/", $body[$i], $matches);
+						$matches = $matches[0];
+						if(count($matches)==0){
+							$matchesEnd = 0;
+						}
+						elseif (count($matches)==1){
+							$matchesEnd = $matches[0];
+						}
+						elseif (count($matches)>1){
+							if($matches[0]==0){
+								$matchesEnd='0.';
+								for ($t=1,$TMax=count($matches); $t < $TMax; $t++){
+									$matchesEnd.=$matches[$t];
+								}
+							}
+							else{
+								$matchesEnd='';
+								foreach ($matches as $num){
+									$matchesEnd.=$num;
+								}
+							}
+						}
+						
+					$arr[$body[$i]]['loan_interest'] = $matchesEnd;
+					
 				}
 				$programs[$item] = $arr;
 			}
+			
 		}
 		if(count($programs)==0){
 			return ['status'=>false,'message'=>'Нет программ'];
@@ -98,15 +125,17 @@ class grotemAPI2 extends CI_Controller
 		/*
 		 * Проверка жива-ли программа
 		 */
-		$queryArrayLive = '('; // Объявляем массив запроса к БД
+		$queryArrayLive = ''; // Объявляем массив запроса к БД
 		foreach ($programs as $type=>$program){ // Формируем массив запроса к БД жива программа или нет
 			foreach ($program as $key=>$val){
-				$queryArrayLive.=' \''.$key.'\',';
+				$queryArrayLive.='   (`programm_syn` =  \''.$key.'\' AND `partner_reward` =  \''.$val['loan_interest'].'\' AND `active` IS NULL )  OR' ;
 			}
 		}
-		$queryArrayLive = mb_substr($queryArrayLive, 0, -1);
-		$queryArrayLive.=')'; // Окончание формирования WHERE IN
-		$program_is_alive = $this->db_programms->query('SELECT DISTINCT(`programm_syn`) FROM programm_margin WHERE `active` IS NULL AND `programm_syn` IN '.$queryArrayLive.'')->result();
+		$queryArrayLive = mb_substr($queryArrayLive, 0, -2);
+		
+		
+		
+		$program_is_alive = $this->db_programms->query('SELECT DISTINCT(`programm_syn`) FROM programm_margin WHERE '.$queryArrayLive.' ')->result();
 		
 		if (count($program_is_alive) == 0){ // Проверка смысла создания Job в принципе
 			return ['status'=>false,'message'=>'Ни одной работающей программы не нашлось'];
@@ -340,6 +369,43 @@ class grotemAPI2 extends CI_Controller
             ['data'=>base64_decode($data['data'])]
         );
     }
+	
+	
+	public function termos(){
+		$data = ['Стандарт', 'Стандарт 0,5', 'Стандарт 4','Стандарт 0.7'];
+		$result = [];
+		for ($i = 0, $IMax=count($data); $i < $IMax; $i++){
+			preg_match_all("/\d+/", $data[$i], $matches);
+			$matches = $matches[0];
+			$long = count($matches);
+			if(count($matches)==0){
+				$matchesEnd = 0;
+			}
+			elseif (count($matches)==1){
+				$matchesEnd = $matches[0];
+			}
+			elseif (count($matches)>1){
+				if($matches[0]==0){
+					$matchesEnd='0.';
+					for ($t=1,$TMax=count($matches); $t < $TMax; $t++){
+						$matchesEnd.=$matches[$t];
+					}
+				}
+				else{
+					$matchesEnd='';
+					foreach ($matches as $num){
+						$matchesEnd.=$num;
+					}
+				}
+			}
+			
+			//echo '<pre>'; print_r($matches); echo '</pre>';
+			$result[$data[$i]]['lon_interest'] = $matchesEnd;
+		}
+		
+		
+		echo '<pre>'; print_r($result); echo '</pre>';
+	}
 
 	
 
