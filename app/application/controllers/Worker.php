@@ -39,16 +39,22 @@
 			$types = ['standart','action','specaction'];
 			set_time_limit(3600000);
 			$instance_at_work = $this->Job->getWorkerStatus();
+			
 			while($instance_at_work == 1){ // Если у нас уже работает worker то просто спим 5 секунд
-				sleep(5);
+				sleep(5); //спим 5 секунд
+				
 				$instance_at_work = $this->Job->getWorkerStatus(); // Обновляем статус работника
 			}
 			$this->Job->updateWorkerStatus(1); // Занимаем Worker
 			
 			$day = date('Y-m-d');
+			//$day = '2022-03-22';
 			$Jobs = $this->Job->getDateJobs($day);
-			$this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
+			if(count($Jobs)>0) {
+				$this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
+			}
 			if(count($Jobs) > 0) { //Если есть работа на сегодня
+				
 				foreach ($Jobs as $item) {
 					$id = $item['id'];
 					$work = json_decode($item['job_body'], true);
@@ -89,12 +95,12 @@
 							$ExceptionsRequest[] = $programs_to_job['start'][$i]['exceptions'][$type];
 						}
 					}
+					$except_temp =[];
 					foreach($ExceptionsRequest as $item){ // Контроль пустых значений в Exceptions
 						if(!empty($item))$except_temp[]=$item;
 					}
 					$ExceptionsRequest = $except_temp;
 					if (count($ExceptionsRequest) > 0) {
-					
 						$ExceptionsResult = $this->Job->getTechNames($ExceptionsRequest, true); // Собран массив всех исключений с нормальным именем и техническим
 					} else {
 						$ExceptionsResult = [];

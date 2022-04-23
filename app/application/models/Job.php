@@ -33,7 +33,7 @@
 		public function getDateJobs(string $date):array
 		{
 			
-			return  $this->db_programms->query('SELECT j.id, j.job_body, l.log_writing_data as partner  FROM `Jobs` j LEFT JOIN Log l ON j.id = l.log_recipient_id WHERE DATE(job_start) <= "'.$date.'" AND DATE(job_finish) >= "'.$date.'" AND JSON_CONTAINS (job_dates, \'["'.$date.'"]\') AND job_last_work_day IS NOT '.date('Y-m-d'))->result_array();
+			return  $this->db_programms->query('SELECT j.id, j.job_body, l.log_writing_data as partner  FROM `Jobs` j LEFT JOIN Log l ON j.id = l.log_recipient_id WHERE DATE(job_start) <= "'.$date.'" AND DATE(job_finish) >= "'.$date.'" AND JSON_CONTAINS (job_dates, \'["'.$date.'"]\') AND DATE (job_last_work_day) <> "'.date('Y-m-d').'" OR job_last_work_day IS NULL')->result_array();
 		}
 		
 		/**
@@ -44,11 +44,11 @@
 		public function setJobsAtWork(array $Jobs){
 			$querySTR ='( ';
 			foreach ($Jobs as $id){
-				$querySTR.=' \''.$id['job_id'].'\',';
+				$querySTR.=' \''.$id['id'].'\',';
 			}
 			$querySTR=mb_substr($querySTR, 0, -1);
 			$querySTR.=')';
-			$this->db_programms->query('UPDATE Jobs SET job_last_work_day = '.date('Y-m-d').' WHERE job_id IN '.$querySTR);
+			$this->db_programms->query('UPDATE Jobs SET job_last_work_day = '.date('Y-m-d').' WHERE id IN '.$querySTR);
 			
 		}
 		
@@ -81,12 +81,20 @@
 		 */
 		public function  getTechNames(array $Request, bool $Is_exception=false): array
 		{ //todo срочно переделать под последнюю правку с учетом loan_interest
+			
+			
 			$Query = '(';
 			foreach ($Request as $item){
 				$Query.=' \''.$item.'\',';
 			}
 			$Query = mb_substr($Query, 0, -1);
 			$Query.=')';
-			return ($Is_exception) ? $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm_tech as record FROM programm_margin WHERE  `programm_syn` IN ' . $Query . '')->result_array() : $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm_tech as record FROM programm_margin WHERE `active` IS NULL AND  `programm_syn` IN ' . $Query . '')->result_array();
+			$preQuery = $this->db_programms->query('SELECT сlient_name, loan_interest FROM programm_line WHERE сlient_name IN '.$Query)->result_array();
+			$Query = '';
+			foreach ($preQuery as $pre){
+				$Query.= ' (`programm_syn` = "'.$pre['сlient_name'].'" AND partner_reward = "'.$pre['loan_interest'].'") OR';
+			}
+			$Query = mb_substr($Query, 0, -2);
+			return ($Is_exception) ? $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm_tech as record FROM programm_margin WHERE' . $Query)->result_array() : $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm_tech as record FROM programm_margin WHERE ' . $Query)->result_array();
 		}
 	}

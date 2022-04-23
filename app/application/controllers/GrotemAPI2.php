@@ -75,14 +75,12 @@ class grotemAPI2 extends CI_Controller
 				$start = explode('|', $data[$item.'_datastart']);
 				$stop = explode('|', $data[$item.'_dataend']);
 				$preQuery = '(';
-				foreach ($body as $item){
-					$preQuery.=' \''.$item.'\',';
+				foreach ($body as $items){
+					$preQuery.=' \''.$items.'\',';
 				}
 				$preQuery = mb_substr($preQuery, 0, -1);
 				$preQuery.=')';
-				
 				$dataBase = $this->db_programms->query('SELECT сlient_name, loan_interest FROM programm_line WHERE сlient_name IN '.$preQuery)->result_array();
-				
 				for ($i = 0, $Imax = count($body); $i < $Imax; $i++) { // Добавление дат подключения и отключения
 					$arr[$body[$i]]['start'] = (is_null($start[$i])) ? null : $start[$i];
 					$arr[$body[$i]]['end'] = (is_null($stop[$i])) ? null : $stop[$i];
@@ -92,7 +90,6 @@ class grotemAPI2 extends CI_Controller
 				}
 				$programs[$item] = $arr;
 			}
-			
 		}
 		if(count($programs)==0){
 			return ['status'=>false,'message'=>'Нет программ'];
@@ -118,8 +115,6 @@ class grotemAPI2 extends CI_Controller
 			}
 		}
 		$queryArrayLive = mb_substr($queryArrayLive, 0, -2);
-		
-		
 		
 		$program_is_alive = $this->db_programms->query('SELECT DISTINCT(`programm_syn`) FROM programm_margin WHERE '.$queryArrayLive.' ')->result();
 		
@@ -152,7 +147,6 @@ class grotemAPI2 extends CI_Controller
 				}
 			}
 		}
-		
 		$checkExceptionsArray=[]; // Общий массив всех исключений
 		foreach ($programs as $type=>$name){ // Формирование всех типов исключений
 			foreach ($name as $item){
@@ -164,8 +158,6 @@ class grotemAPI2 extends CI_Controller
 				}
 			}
 		} // Окончание формирования исключений по категориям
-  
-		
 		foreach ($checkExceptionsArray as $typeException=>$exceptionsGroup){
 			foreach ($exceptionsGroup as $exceptionElement){
 				if(isset($programs[$typeException][$exceptionElement])){
@@ -200,53 +192,6 @@ class grotemAPI2 extends CI_Controller
 						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['end']=strtotime($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']);
 					}
 					// Конец определения типов подключения конфликтующих программ
-					
-					// Проверка уживаемости ОТРЕЗАНО по распоряжению Дениса
-					/* if($program_one['life']['type'] == 'add' && $program_two['life']['type'] == 'add'){ // полная несовместимость
-						 return ['status'=>false,'message'=>'Взаимоисключающие программы не могут быть запущены! ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
-					 }
-					 
-					 elseif($program_one['life']['type'] == 'add'&& $program_two['life']['type'] == 'time_add'){ //Первую подключаем Вторую будем отключать
-						if($program_one['life']['start']< $program_two['life']['end'])
-							return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
-					 }
-					 elseif($program_two['life']['type'] == 'add'&& $program_one['life']['type'] == 'time_add'){ //Первую подключаем Вторую будем отключать
-						 if($program_two['life']['start']< $program_one['life']['end'])
-							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
-					 }
-					 
-					 elseif($program_one['life']['type'] == 'add'&& $program_two['life']['type'] == 'remove'){ //Первую подключаем Вторую отключаем
-						 if($program_one['life']['start'] < $program_two['life']['end'])
-							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
-					 }
-					 elseif($program_one['life']['type'] == 'remove'&& $program_two['life']['type'] == 'add'){ //Первую отключаем  Вторую подключаем
-						 if($program_two['life']['start'] < $program_one['life']['end'])
-							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
-					 }
-					 
-					 elseif($program_one['life']['type'] == 'time_add'&& $program_two['life']['type'] == 'remove'){ //Первую подключаем на время  Вторую отключаем
-						 if($program_one['life']['start'] < $program_two['life']['end'])
-							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
-					 }
-					 elseif($program_two['life']['type'] == 'time_add'&& $program_one['life']['type'] == 'remove'){ //Первую подключаем на время  Вторую отключаем
-						 if($program_two['life']['start'] < $program_one['life']['end'])
-							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
-					 }
-					 
-					 elseif ($program_one['life']['type'] == 'time_add'&& $program_two['life']['type'] == 'time_add'){ // Обе подключаются на какое-то время
-						 $line = [];
-						  if($program_one['life']['start'] <= $program_two['life']['start']){
-							$line[0]=$program_one;
-							$line[1]=$program_two;
-						 }
-						  else{
-							  $line[1]=$program_one;
-							  $line[0]=$program_two;
-						  }
-						  if($line[0]['life']['end'] >$line[1]['life']['end']){
-							  return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
-						  }
-					 }*/
 				}
 			}
 		} //Конец проверки
@@ -358,37 +303,9 @@ class grotemAPI2 extends CI_Controller
 	
 	
 	public function termos(){
-		$data = ['Стандарт', 'Стандарт 0,5', 'Стандарт 4','Стандарт 0.7'];
-		$result = [];
-		for ($i = 0, $IMax=count($data); $i < $IMax; $i++){
-			preg_match_all("/\d+/", $data[$i], $matches);
-			$matches = $matches[0];
-			$long = count($matches);
-			if(count($matches)==0){
-				$matchesEnd = 0;
-			}
-			elseif (count($matches)==1){
-				$matchesEnd = $matches[0];
-			}
-			elseif (count($matches)>1){
-				if($matches[0]==0){
-					$matchesEnd='0.';
-					for ($t=1,$TMax=count($matches); $t < $TMax; $t++){
-						$matchesEnd.=$matches[$t];
-					}
-				}
-				else{
-					$matchesEnd='';
-					foreach ($matches as $num){
-						$matchesEnd.=$num;
-					}
-				}
-			}
-			
-			//echo '<pre>'; print_r($matches); echo '</pre>';
-			$result[$data[$i]]['lon_interest'] = $matchesEnd;
-		}
+		$data = '{"standart":{"Стандарт":{"start":"23.03.22","end":"","loan_interest":"0","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}},"Стандарт 3":{"start":"27.01.21","end":"22.03.22","loan_interest":"3","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}}},"action":{"Оптимальный":{"start":"23.03.22","end":"","loan_interest":"0","exceptions":{"standart":"Стандарт Плюс","action":"Оптимальный Плюс","specaction":"Возможно всё Плюс"}},"Удобный 2":{"start":"27.01.21","end":"23.03.22","loan_interest":"2","exceptions":{"standart":"","action":"","specaction":""}}}}';
 		
+		$result = json_decode($data,true);
 		
 		echo '<pre>'; print_r($result); echo '</pre>';
 	}
