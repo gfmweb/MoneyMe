@@ -80,7 +80,7 @@
 		 * 2. Когда мы проверяем программы которые будем удалть (Exceptions или просто программы для удаления) - то мы не проверяем статус их активности
 		 */
 		public function  getTechNames(array $Request, bool $Is_exception=false): array
-		{ //todo срочно переделать под последнюю правку с учетом loan_interest
+		{
 			
 			
 			$Query = '(';

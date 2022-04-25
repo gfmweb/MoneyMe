@@ -48,7 +48,6 @@
 			$this->Job->updateWorkerStatus(1); // Занимаем Worker
 			
 			$day = date('Y-m-d');
-			//$day = '2022-03-22';
 			$Jobs = $this->Job->getDateJobs($day);
 			if(count($Jobs)>0) {
 				$this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
@@ -72,8 +71,6 @@
 						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не TT. Запись' . $error_id);
 						continue;
 					}
-					// оставил как пример но можно затереть
-					//$day = date('d.m.y',strtotime('2021-01-27')); //todo убрать strtotime
 					$day = date('d.m.y');
 					$programs_to_job['start'] = []; // Массив предстоящих работ по подключению
 					$programs_to_job['end'] = []; // Массив предстоящих работ по отключению
