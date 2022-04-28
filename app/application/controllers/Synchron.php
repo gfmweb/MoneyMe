@@ -51,8 +51,6 @@
 		 * @param string $service
 		 * @param string $keyName
 		 * @param mixed $keyValue
-		 * @param string $prepareBy
-		 * @param string $method
 		 * @return mixed
 		 * CURL бегалка к сервисам
 		 */

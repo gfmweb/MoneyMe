@@ -49,8 +49,10 @@
 			
 			$day = date('Y-m-d');
 			$Jobs = $this->Job->getDateJobs($day);
+		
 			if(count($Jobs)>0) {
-				$this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
+				$test = $this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
+				
 			}
 			if(count($Jobs) > 0) { //Если есть работа на сегодня
 				
@@ -58,15 +60,22 @@
 					$id = $item['id'];
 					$work = json_decode($item['job_body'], true);
 					$partner = json_decode($item['partner'], true);
+					
 					$partner = $partner['partner_prefix'];
+					
 					$partner = $this->AnketMaster->getAnketByPrefix($partner);
+					if(!isset($partner[0])){ //  Убираем пустые элементы
+						continue;
+					}
 					$anketa = unserialize(base64_decode($partner[0]['data']));
+					
 					if ($partner[0]['active'] == '2') {
 						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Партнер не активен'], 256), 'Log', $id);
 						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не активен. Запись' . $error_id);
 						continue;
 					}
 					if ($partner[0]['is_TT'] !== '1') {
+						
 						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Партнер не ТТ'], 256), 'Log', $id);
 						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не TT. Запись' . $error_id);
 						continue;
@@ -74,6 +83,7 @@
 					$day = date('d.m.y');
 					$programs_to_job['start'] = []; // Массив предстоящих работ по подключению
 					$programs_to_job['end'] = []; // Массив предстоящих работ по отключению
+					
 					foreach ($work as $type => $program) { // Собираем программы по которым предстоит работа
 						$Names = array_keys($program);
 						for ($i = 0, $iMax = count($Names); $i < $iMax; $i++) {
@@ -112,55 +122,59 @@
 						$StartResult = $this->Job->getTechNames($StartResult);
 						
 					}
-				}
-				
-				$toKill = []; // Массив кандидатов для удаления
-				for ($i = 0, $iMax = count($anketa['programm'][0]['programms']); $i < $iMax; $i++) {
-					foreach ($ExceptionsResult as $Exception) {
-						if ($Exception['record'] == $anketa['programm'][0]['programms'][$i]) {
-							$toKill[] = $i; // Формирование целей убийств существующих в анкете программ по причине Exception
-						}
-					}
-				}
-				// Собираем массив программ которые нам надо удалить в этом задании
-				$EndResult = [];
-				foreach ($programs_to_job['end'] as $program) {
-					$EndResult[] = $program['name'];
-				}
-				if (count($EndResult) > 0) {
-					$EndResult = $this->Job->getTechNames($EndResult, true);
+					
+					
+					$toKill = []; // Массив кандидатов для удаления
 					for ($i = 0, $iMax = count($anketa['programm'][0]['programms']); $i < $iMax; $i++) {
-						foreach ($EndResult as $End) {
-							if ($End['record'] == $anketa['programm'][0]['programms'][$i]) {
-								$toKill[] = $i; // Формирование целей убийств существующих в анкете программ по причине Отключения
+						foreach ($ExceptionsResult as $Exception) {
+							if ($Exception['record'] == $anketa['programm'][0]['programms'][$i]) {
+								$toKill[] = $i; // Формирование целей убийств существующих в анкете программ по причине Exception
 							}
 						}
 					}
-				}
-				$killTechNames = '';
-				foreach ($toKill as $key => $val) {
-					$killTechNames .= ' ' . $anketa['programm'][0]['programms'][$key] . ' ';
+					// Собираем массив программ которые нам надо удалить в этом задании
+					$EndResult = [];
+					foreach ($programs_to_job['end'] as $program) {
+						$EndResult[] = $program['name'];
+					}
+					if (count($EndResult) > 0) {
+						$EndResult = $this->Job->getTechNames($EndResult, true);
+						for ($i = 0, $iMax = count($anketa['programm'][0]['programms']); $i < $iMax; $i++) {
+							foreach ($EndResult as $End) {
+								if ($End['record'] == $anketa['programm'][0]['programms'][$i]) {
+									$toKill[] = $i; // Формирование целей убийств существующих в анкете программ по причине Отключения
+								}
+							}
+						}
+					}
+					$killTechNames = '';
+					foreach ($toKill as $key => $val) {
+						$killTechNames .= ' ' . $anketa['programm'][0]['programms'][$key] . ' ';
+						
+					}
+					$added = '';
+					for ($i = 0, $iMax = count($StartResult); $i < $iMax; $i++) {
+						$added .= ' ' . $StartResult[$i]['record'];
+					}
+					$result = ['before' => $anketa['programm'][0]['programms'], 'killed' => $killTechNames, 'added' => $added];
+					foreach ($toKill as $kill) {
+						unset($anketa['programm'][0]['programms'][$kill]);
+					}
+					foreach ($StartResult as $start) {
+						$anketa['programm'][0]['programms'][] = $start['record'];
+					}
+					foreach ($anketa['programm'][0]['programms'] as $programm) {
+						$temp[] = $programm;
+					}
+					$anketa['programm'][0]['programms'] = $temp; // теперь программы опять по порядку индексов
+					$writeData = base64_encode(serialize($anketa));
+					
+					$this->db_setup->query('UPDATE application SET `data` =\'' . $writeData . '\' WHERE `id` = ' . $partner[0]['id']);
+					$this->Logger->log('worker', 1, 'work', json_encode(['result' => $result], 256), 'Log', $id, 'application', $partner[0]['id']);
 					
 				}
-				$added = '';
-				for ($i = 0, $iMax = count($StartResult); $i < $iMax; $i++) {
-					$added .= ' ' . $StartResult[$i]['record'];
-				}
-				$result = ['before' => $anketa['programm'][0]['programms'], 'killed' => $killTechNames, 'added' => $added];
-				foreach ($toKill as $kill) {
-					unset($anketa['programm'][0]['programms'][$kill]);
-				}
-				foreach ($StartResult as $start) {
-					$anketa['programm'][0]['programms'][] = $start['record'];
-				}
-				foreach ($anketa['programm'][0]['programms'] as $programm) {
-					$temp[] = $programm;
-				}
-				$anketa['programm'][0]['programms'] = $temp; // теперь программы опять по порядку индексов
-				$writeData = base64_encode(serialize($anketa));
 				
-				$this->db_setup->query('UPDATE application SET `data` =\'' . $writeData . '\' WHERE `id` = ' . $partner[0]['id']);
-				$this->Logger->log('worker', 1, 'work', json_encode(['result' => $result], 256), 'Log', $id, 'application', $partner[0]['id']);
+				
 			}
 			TelegramAlert::send($this->db_debug,'Работа с заданиями закончена');
 			$this->Job->updateWorkerStatus(0); // Освобождаем воркера
