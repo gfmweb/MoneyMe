@@ -49,7 +49,7 @@
 			$querySTR=mb_substr($querySTR, 0, -1);
 			$querySTR.=')';
 			$this->db_programms->query('UPDATE Jobs SET job_last_work_day = "'.date('Y-m-d').'" WHERE id IN '.$querySTR);
-			return 'UPDATE Jobs SET job_last_work_day = "'.date('Y-m-d').'" WHERE id IN '.$querySTR;
+		
 		}
 		
 		/**
