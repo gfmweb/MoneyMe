@@ -191,6 +191,52 @@ class grotemAPI2 extends CI_Controller
 						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['type']='remove';
 						$program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['life']['end']=strtotime($program_two[$programs[$typeException][$exceptionElement]['exceptions'][$typeException]]['end']);
 					}
+					
+					 if($program_one['life']['type'] == 'add' && $program_two['life']['type'] == 'add'){ // полная несовместимость
+						 return ['status'=>false,'message'=>'Взаимоисключающие программы не могут быть запущены! ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 
+					 elseif($program_one['life']['type'] == 'add'&& $program_two['life']['type'] == 'time_add'){ //Первую подключаем Вторую будем отключать
+						if($program_one['life']['start']< $program_two['life']['end'])
+							return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 elseif($program_two['life']['type'] == 'add'&& $program_one['life']['type'] == 'time_add'){ //Первую подключаем Вторую будем отключать
+						 if($program_two['life']['start']< $program_one['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+					 }
+					 
+					 elseif($program_one['life']['type'] == 'add'&& $program_two['life']['type'] == 'remove'){ //Первую подключаем Вторую отключаем
+						 if($program_one['life']['start'] < $program_two['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 elseif($program_one['life']['type'] == 'remove'&& $program_two['life']['type'] == 'add'){ //Первую отключаем  Вторую подключаем
+						 if($program_two['life']['start'] < $program_one['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+					 }
+					 
+					 elseif($program_one['life']['type'] == 'time_add'&& $program_two['life']['type'] == 'remove'){ //Первую подключаем на время  Вторую отключаем
+						 if($program_one['life']['start'] < $program_two['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$exceptionElement. ' и '.$programs[$typeException][$exceptionElement]['exceptions'][$typeException].')'];
+					 }
+					 elseif($program_two['life']['type'] == 'time_add'&& $program_one['life']['type'] == 'remove'){ //Первую подключаем на время  Вторую отключаем
+						 if($program_two['life']['start'] < $program_one['life']['end'])
+							 return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+					 }
+					 
+					 elseif ($program_one['life']['type'] == 'time_add'&& $program_two['life']['type'] == 'time_add'){ // Обе подключаются на какое-то время
+						 $line = [];
+						  if($program_one['life']['start'] <= $program_two['life']['start']){
+							$line[0]=$program_one;
+							$line[1]=$program_two;
+						 }
+						  else{
+							  $line[1]=$program_one;
+							  $line[0]=$program_two;
+						  }
+						  if($line[0]['life']['end'] >$line[1]['life']['end']){
+							  return ['status'=>false,'message'=>'Программа не может быть подключена раньше чем закончится предыдущая ('.$programs[$typeException][$exceptionElement]['exceptions'][$typeException] . ' и '.$exceptionElement.')'];
+						  }
+					 }
 					// Конец определения типов подключения конфликтующих программ
 				}
 			}
