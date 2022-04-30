@@ -95,6 +95,6 @@
 				$Query.= ' (`programm_syn` = "'.$pre['сlient_name'].'" AND partner_reward = "'.$pre['loan_interest'].'") OR';
 			}
 			$Query = mb_substr($Query, 0, -2);
-			return ($Is_exception) ? $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm_tech as record FROM programm_margin WHERE' . $Query)->result_array() : $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm_tech as record FROM programm_margin WHERE ' . $Query)->result_array();
+			return ($Is_exception) ? $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm as record FROM programm_margin WHERE' . $Query)->result_array() : $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm as record FROM programm_margin WHERE ' . $Query)->result_array();
 		}
 	}
