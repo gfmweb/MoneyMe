@@ -22,25 +22,27 @@
 		{
 			parent::__construct();
 			$this->db_programms = $this->load->database('db_programms', true, true);
-			$this->db_setup = $this->load->database('setup',true,true);
-			$this->db_debug = $this->load->database('debug',true,true);
+			$this->db_setup = $this->load->database('setup', true, true);
+			$this->db_debug = $this->load->database('debug', true, true);
 		}
 		
 		public function index()
 		{
 			$secret = password_hash('password', PASSWORD_DEFAULT); // Значение ключа
 			$key = $this->input->get('key'); // Передаваемый параметр KEY
-			if(!password_verify($key,$secret)){die();} // Умираем если ключ нам не передали или он не подходит
+			if (!password_verify($key, $secret)) {
+				die();
+			} // Умираем если ключ нам не передали или он не подходит
 			$this->load->model('Job');
 			$this->load->model('AnketMaster');
 			$this->load->model('Logger');
-			require_once ('TelegramAlert.php');
-			TelegramAlert::send($this->db_debug,'Начало работы с заданиями');
-			$types = ['standart','action','specaction'];
+			require_once('TelegramAlert.php');
+			TelegramAlert::send($this->db_debug, 'Начало работы с заданиями');
+			$types = ['standart', 'action', 'specaction'];
 			set_time_limit(3600000);
 			$instance_at_work = $this->Job->getWorkerStatus();
 			
-			while($instance_at_work == 1){ // Если у нас уже работает worker то просто спим 5 секунд
+			while ($instance_at_work == 1) { // Если у нас уже работает worker то просто спим 5 секунд
 				sleep(5); //спим 5 секунд
 				
 				$instance_at_work = $this->Job->getWorkerStatus(); // Обновляем статус работника
@@ -49,12 +51,12 @@
 			
 			$day = date('Y-m-d');
 			$Jobs = $this->Job->getDateJobs($day);
-		
-			if(count($Jobs)>0) {
+			
+			if (count($Jobs) > 0) {
 				$test = $this->Job->setJobsAtWork($Jobs); //Устанавливаем блокировку на задания
 				
 			}
-			if(count($Jobs) > 0) { //Если есть работа на сегодня
+			if (count($Jobs) > 0) { //Если есть работа на сегодня
 				
 				foreach ($Jobs as $item) {
 					$id = $item['id'];
@@ -64,20 +66,20 @@
 					$partner = $partner['partner_prefix'];
 					
 					$partner = $this->AnketMaster->getAnketByPrefix($partner);
-					if(!isset($partner[0])){ //  Убираем пустые элементы
+					if (!isset($partner[0])) { //  Убираем пустые элементы
 						continue;
 					}
 					$anketa = unserialize(base64_decode($partner[0]['data']));
 					
 					if ($partner[0]['active'] == '2') {
 						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Партнер не активен'], 256), 'Log', $id);
-						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не активен. Запись' . $error_id);
+						TelegramAlert::send($this->db_debug, 'Работа по заданию завершилась ошибкой. Партнер не активен. Запись' . $error_id);
 						continue;
 					}
 					if ($partner[0]['is_TT'] !== '1') {
 						
 						$error_id = $this->Logger->log('worker', 0, 'work', json_encode(['message' => 'Партнер не ТТ'], 256), 'Log', $id);
-						TelegramAlert::send($this->db_debug,'Работа по заданию завершилась ошибкой. Партнер не TT. Запись' . $error_id);
+						TelegramAlert::send($this->db_debug, 'Работа по заданию завершилась ошибкой. Партнер не TT. Запись' . $error_id);
 						continue;
 					}
 					$day = date('d.m.y');
@@ -102,9 +104,9 @@
 							$ExceptionsRequest[] = $programs_to_job['start'][$i]['exceptions'][$type];
 						}
 					}
-					$except_temp =[];
-					foreach($ExceptionsRequest as $item){ // Контроль пустых значений в Exceptions
-						if(!empty($item))$except_temp[]=$item;
+					$except_temp = [];
+					foreach ($ExceptionsRequest as $item) { // Контроль пустых значений в Exceptions
+						if (!empty($item)) $except_temp[] = $item;
 					}
 					$ExceptionsRequest = $except_temp;
 					if (count($ExceptionsRequest) > 0) {
@@ -163,6 +165,7 @@
 					foreach ($StartResult as $start) {
 						$anketa['programm'][0]['programms'][] = $start['record'];
 					}
+					$temp =[];
 					foreach ($anketa['programm'][0]['programms'] as $programm) {
 						$temp[] = $programm;
 					}
@@ -176,8 +179,11 @@
 				
 				
 			}
-			TelegramAlert::send($this->db_debug,'Работа с заданиями закончена');
+			TelegramAlert::send($this->db_debug, 'Работа с заданиями закончена');
 			$this->Job->updateWorkerStatus(0); // Освобождаем воркера
 			
 		}
+		
+		
+		
 	}

@@ -92,7 +92,7 @@
 			$preQuery = $this->db_programms->query('SELECT сlient_name, loan_interest FROM programm_line WHERE сlient_name IN '.$Query)->result_array();
 			$Query = '';
 			foreach ($preQuery as $pre){
-				$Query.= ' (`programm_syn` = "'.$pre['сlient_name'].'" AND partner_reward = "'.$pre['loan_interest'].'") OR';
+				$Query.= ' (`programm_syn` = "'.$pre['сlient_name'].'" AND active IS NULL AND partner_reward = "'.$pre['loan_interest'].'") OR';
 			}
 			$Query = mb_substr($Query, 0, -2);
 			return ($Is_exception) ? $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm as record FROM programm_margin WHERE' . $Query)->result_array() : $this->db_programms->query('SELECT DISTINCT(programm_syn) as name, programm as record FROM programm_margin WHERE ' . $Query)->result_array();
